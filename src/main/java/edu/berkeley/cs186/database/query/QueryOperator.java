@@ -16,7 +16,7 @@ import java.util.List;
 
 public abstract class QueryOperator implements Iterable<Record> {
     protected QueryOperator source;
-    protected Schema outputSchema;
+    protected Schema outputSchema;  //数据表的逻辑结构
     protected TableStats stats;
 
     public enum OperatorType {

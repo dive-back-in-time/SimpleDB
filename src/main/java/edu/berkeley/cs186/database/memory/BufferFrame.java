@@ -5,7 +5,7 @@ package edu.berkeley.cs186.database.memory;
  */
 abstract class BufferFrame {
     Object tag = null;
-    private int pinCount = 0;
+    private int pinCount = 0; //标识有多少个进程正在使用这个帧
 
     /**
      * Pin buffer frame; cannot be evicted while pinned. A "hit" happens when the

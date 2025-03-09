@@ -14,6 +14,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 
 /**
+ * BufferManager 是 数据库缓冲管理器（Buffer Manager）的实现，它负责 管理数据库页面（Page）在内存中的缓存，以减少磁盘 I/O 并提高性能。
+ *
+ * 数据库通常将数据存储在 磁盘上的数据页（Page） 中，而访问磁盘的速度远远慢于访问内存。因此，BufferManager 的作用是 在内存中缓存数据库页面，并 控制页面的加载、替换和持久化
  * Implementation of a buffer manager, with configurable page replacement policies.
  * Data is stored in page-sized byte arrays, and returned in a Frame object specific
  * to the page loaded (evicting and loading a new page into the frame will result in

@@ -87,7 +87,14 @@ public class SortOperator extends QueryOperator {
      */
     public Run sortRun(Iterator<Record> records) {
         // TODO(proj3_part1): implement
-        return null;
+
+        List<Record> recordList = new ArrayList<>();
+        while (records.hasNext()) {
+            recordList.add(records.next());
+        }
+        recordList.sort(comparator);
+
+        return makeRun(recordList);
     }
 
     /**
@@ -108,7 +115,31 @@ public class SortOperator extends QueryOperator {
     public Run mergeSortedRuns(List<Run> runs) {
         assert (runs.size() <= this.numBuffers - 1);
         // TODO(proj3_part1): implement
-        return null;
+        PriorityQueue<Pair<Record, Integer>> pq = new PriorityQueue<>(new RecordPairComparator());
+        List<Iterator<Record>> iterators = new ArrayList<>();
+        // 先获取每一个排序段的迭代器
+        for (Run run : runs) {
+            iterators.add(run.iterator());
+        }
+        int i = 0;
+        // 获取每个排序段中的最小元素，并将其填入优先队列
+        for (Iterator<Record> iterator : iterators) {
+            if (iterator.hasNext()) {
+                pq.add(new Pair<>(iterator.next(), i));
+            }
+            i++;
+        }
+        List<Record> output = new ArrayList<>();
+        while (!pq.isEmpty()) {
+            Pair<Record, Integer> pair = pq.poll();
+            Record record = pair.getFirst();
+            output.add(record);
+            Iterator<Record> it = iterators.get(pair.getSecond());
+            if (it.hasNext()) {
+                pq.add(new Pair<>(it.next(), pair.getSecond()));
+            }
+        }
+        return makeRun(output);
     }
 
     /**

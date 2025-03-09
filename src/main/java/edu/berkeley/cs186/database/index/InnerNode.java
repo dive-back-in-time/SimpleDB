@@ -42,6 +42,7 @@ class InnerNode extends BPlusNode {
     // LeafNode.keys and LeafNode.rids in LeafNode.java for a warning on the
     // difference between the keys and children here versus the keys and children
     // stored on disk. `keys` is always stored in ascending order.
+    // keys是键值，children是分布于其两边的子节点列表
     private List<DataBox> keys;
     private List<Long> children;
 
@@ -81,25 +82,70 @@ class InnerNode extends BPlusNode {
     @Override
     public LeafNode get(DataBox key) {
         // TODO(proj2): implement
+        int index = numLessThanEqual(key, keys);
+        BPlusNode child = getChild(index);
 
-        return null;
+        return child.get(key);
+
+
     }
 
     // See BPlusNode.getLeftmostLeaf.
+    //获取对应节点中最左边的叶子节点
     @Override
     public LeafNode getLeftmostLeaf() {
         assert(children.size() > 0);
         // TODO(proj2): implement
 
-        return null;
+
+        return getChild(0).getLeftmostLeaf();
     }
 
     // See BPlusNode.put.
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
+        int index = numLessThanEqual(key, keys);
+        BPlusNode child = getChild(index);
+        Optional<Pair<DataBox, Long>> op = child.put(key, rid); //这时候是叶子节点插入数据
+        if (op.isEmpty()) {
+            //子节点没有触发分裂，直接返回空值
+            return Optional.empty();
+        }
+        DataBox newKey = op.get().getFirst();
+        Long newPage = op.get().getSecond();
+        int d = metadata.getOrder();
 
-        return Optional.empty();
+        //更新索引节点的值
+        keys.add(index, newKey);
+        // 返回的是右边的孩子，因此要放置在索引的右侧
+        children.add(index + 1, newPage);
+
+
+
+        if (keys.size() < 2*d + 1) {
+            sync();
+            return Optional.empty();
+        }
+
+        return split(d);
+
+
+    }
+
+    private Optional<Pair<DataBox, Long>> split(int d) {
+        List<DataBox> leftKeys = keys.subList(0, d);
+        List<DataBox> rightKeys = keys.subList(d + 1, 2 * d + 1);
+        List<Long> leftChildren = children.subList(0, d + 1);
+        List<Long> rightChildren = children.subList(d + 1, 2 * d + 2);
+
+        DataBox retKey = keys.get(d);
+
+        InnerNode right = new InnerNode(metadata, bufferManager, rightKeys, rightChildren, treeContext);
+        this.keys = leftKeys;
+        this.children = leftChildren;
+        sync();
+        return Optional.of(new Pair<DataBox, Long>(retKey, right.getPage().getPageNum()));
     }
 
     // See BPlusNode.bulkLoad.
@@ -107,14 +153,33 @@ class InnerNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
             float fillFactor) {
         // TODO(proj2): implement
-
+        BPlusNode child = getChild(children.size() - 1);
+        Optional<Pair<DataBox, Long>> op = child.bulkLoad(data, fillFactor);
+        int d = metadata.getOrder();
+        while (op.isPresent()) {
+            DataBox newKey = op.get().getFirst();
+            Long pageNum = op.get().getSecond();
+            keys.add(newKey);
+            children.add(pageNum);
+            if (keys.size() >= 2 * d + 1) {
+                return split(d);
+            }
+            child = getChild(children.size() - 1);
+            op = child.bulkLoad(data, fillFactor);
+        }
+        sync();
         return Optional.empty();
+
+
     }
 
     // See BPlusNode.remove.
     @Override
     public void remove(DataBox key) {
         // TODO(proj2): implement
+        LeafNode leaf = get(key);
+        leaf.remove(key);
+        sync();
 
         return;
     }

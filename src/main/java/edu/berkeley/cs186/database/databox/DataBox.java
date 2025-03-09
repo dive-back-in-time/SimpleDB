@@ -5,6 +5,9 @@ import edu.berkeley.cs186.database.common.Buffer;
 import java.nio.charset.Charset;
 
 /**
+ * 数据存储：可以将不同类型的数据以统一格式存储。
+ * 序列化/反序列化：可以将数据转换为字节流，便于数据库或网络传输。
+ * 数据抽象：可以用 DataBox 统一处理不同数据类型
  * A DataBox is an element of one of the primitive types specified in Type.java.
  * You can create
  *   - booleans with new BoolDataBox(b),
