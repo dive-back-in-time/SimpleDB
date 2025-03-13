@@ -22,8 +22,20 @@ public enum LockType {
             throw new NullPointerException("null lock type");
         }
         // TODO(proj4_part1): implement
+        if (a == LockType.NL || b == LockType.NL) {
+            return true;
+        }
+        if (a == LockType.X || b == LockType.X) {
+            return false;
+        }
+        if ((a == LockType.SIX || b == LockType.SIX) && a != b) {
+            return false;
+        }
+        if ((a == LockType.S && b == LockType.IX) || (a == LockType.IX && b == LockType.S)) {
+            return false;
+        }
+        return true;
 
-        return false;
     }
 
     /**
@@ -55,7 +67,9 @@ public enum LockType {
         }
         // TODO(proj4_part1): implement
 
-        return false;
+
+
+        return substitutable(parentLockType, parentLock(childLockType)); // parentLock方法返回子节点对应父节点的锁层级， 然后判断parentLockType是否比对应父节点的锁层级权限大
     }
 
     /**
@@ -69,8 +83,27 @@ public enum LockType {
             throw new NullPointerException("null lock type");
         }
         // TODO(proj4_part1): implement
+        // substitute的权限会比required更大
+        if (required == substitute) {
+            return true;
+        }
+        if (required == LockType.X) {
+            return false;
+        }
+        if (required == LockType.SIX && LockType.X != substitute) {
+            return false;
+        }
+        if (required == LockType.S && LockType.SIX != substitute && LockType.X != substitute) {
+            return false;
+        }
+        if (required == LockType.IX && (substitute == LockType.IS || substitute == LockType.NL)) {
+            return false;
+        }
+        if (required == LockType.IS && substitute == LockType.NL) {
+            return false;
+        }
 
-        return false;
+        return true;
     }
 
     /**
