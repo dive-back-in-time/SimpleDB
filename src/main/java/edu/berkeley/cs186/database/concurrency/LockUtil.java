@@ -42,8 +42,57 @@ public class LockUtil {
         LockType explicitLockType = lockContext.getExplicitLockType(transaction);
 
         // TODO(proj4_part2): implement
+        if (LockType.substitutable(explicitLockType, requestType)) {
+            return;
+        }
+
+        // 如果当前隐式的锁类型已经满足需要，就不做任何操作
+        if (LockType.substitutable(effectiveLockType, requestType)) {
+            return;
+        }
+
+        // 确保父级已经获取了前置锁
+        if (parentContext != null) {
+            LockType parentLock = LockType.parentLock(requestType);
+            ensureAncestorLock(parentContext, parentLock, transaction);
+        }
+
+        // IX S锁直接升级为SIX
+        if (explicitLockType == LockType.IX && requestType == LockType.S) {
+            lockContext.promote(transaction, LockType.SIX);
+            return;
+        }
+
+        // IS IX SIX锁直接升级为S 或 X
+        if (explicitLockType.isIntent()) {
+            lockContext.escalate(transaction);
+            return;
+        }
+
+        // 空锁直接加，否则进行升级
+        if (explicitLockType == LockType.NL) {
+            lockContext.acquire(transaction, requestType);
+        } else {
+            lockContext.promote(transaction, requestType);
+        }
         return;
     }
 
     // TODO(proj4_part2) add any helper methods you want
+    // 父节点增加对应限制的锁，例如table锁是X，则db锁要加上IX
+    private static void ensureAncestorLock(LockContext parent, LockType requestType, TransactionContext transaction) {
+        if (parent == null || requestType == null) return;
+        LockType effectiveLockType = parent.getEffectiveLockType(transaction);
+        LockType explicitLockType = parent.getExplicitLockType(transaction);
+        if (LockType.substitutable(explicitLockType, requestType) || LockType.substitutable(effectiveLockType, requestType))
+            return;
+        LockContext grandContext = parent.parentContext();
+        LockType grandLock = LockType.parentLock(requestType);
+        ensureAncestorLock(grandContext, grandLock, transaction);
+        if (explicitLockType == LockType.NL) {
+            parent.acquire(transaction, requestType);
+        } else {
+            parent.promote(transaction, requestType);
+        }
+    }
 }
