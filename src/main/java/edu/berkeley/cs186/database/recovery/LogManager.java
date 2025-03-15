@@ -84,6 +84,7 @@ public class LogManager implements Iterable<LogRecord>, AutoCloseable {
                 logTail = bufferManager.fetchNewPage(new DummyLockContext("_dummyLogPageRecord"), LOG_PARTITION);
                 unflushedLogTail.add(logTail);
                 logTailBuffer = logTail.getBuffer();
+                // 如果logTailBuffer为空或者满，则为其开启新的日志页
             } else {
                 logTailPinned = true;
                 logTail.pin();
@@ -95,6 +96,8 @@ public class LogManager implements Iterable<LogRecord>, AutoCloseable {
         try {
             int pos = logTailBuffer.position();
             logTailBuffer.put(bytes);
+
+            // 构造LSN索引
             long LSN = makeLSN(unflushedLogTail.getLast().getPageNum(), pos);
             record.LSN = LSN;
             return LSN;
